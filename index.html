@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>سامانه مرکز تماس — بیمه هوشمند فردا</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F3F6FB; --card:#FFFFFF; --line:#E2E8F2; --line-2:#EDF1F8;
+    --text:#1C2A3A; --muted:#64748B; --soft:#F8FAFD;
+    --accent:#2563EB; --accent-soft:#EFF4FF; --accent-line:#C7D8FB;
+    --live:#D97706; --live-soft:#FFF4E2;
+    --ok:#059669; --ok-soft:#E7F7F0;
+    --danger:#DC2626; --danger-soft:#FDEBEB;
+    --radius:14px;
+    --shadow:0 1px 3px rgba(28,42,58,.06), 0 4px 14px rgba(28,42,58,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Vazirmatn',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+  header{
+    background:var(--card);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 22px;flex-wrap:wrap;gap:10px;
+    position:sticky;top:0;z-index:20;box-shadow:0 1px 2px rgba(28,42,58,.04);
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;display:grid;place-items:center;font-weight:900;font-size:18px}
+  .brand h1{font-size:15.5px;font-weight:800}
+  .brand small{display:block;color:var(--muted);font-weight:400;font-size:11.5px;margin-top:1px}
+  .session{display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted)}
+  .timer{font-variant-numeric:tabular-nums;font-weight:800;font-size:17px;color:var(--text)}
+  .status-pill{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--soft);border-radius:99px;padding:5px 13px;font-size:12.5px}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:#94A3B8;transition:.3s}
+  body.recording .status-dot{background:var(--live);box-shadow:0 0 0 4px var(--live-soft);animation:pulse 1.4s infinite}
+  body.busy .status-dot{background:var(--accent)}
+  @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(217,119,6,.08)}}
+
+  .wrap{max-width:1280px;margin:0 auto;padding:16px 18px;display:flex;flex-direction:column;gap:16px}
+  .grid{display:grid;grid-template-columns:1.05fr 1fr;gap:16px;align-items:start}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column;gap:16px;min-width:0}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;border-bottom:1px solid var(--line-2);flex-wrap:wrap;gap:8px}
+  .card-head h2{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .card-head h2 .step{
+    width:24px;height:24px;border-radius:8px;background:var(--accent);color:#fff;
+    display:grid;place-items:center;font-size:12px;font-weight:800;
+  }
+  .card-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+  .btn{font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px 14px;transition:.15s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#1D4ED8;color:#fff}
+  .btn.ghost{background:var(--soft)}
+  .btn.big{font-size:13.5px;padding:11px 18px}
+
+  /* ---------- model bar (هر مرحله) ---------- */
+  .model-bar{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+    padding:12px 18px;background:var(--soft);border-bottom:1px solid var(--line-2);
+  }
+  @media(max-width:560px){.model-bar{grid-template-columns:1fr}}
+  .field label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700}
+  .field input,.field select,.field textarea{
+    width:100%;font-family:inherit;background:var(--card);color:var(--text);
+    border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:12.5px;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .key-state{font-size:10.5px;margin-top:3px;font-weight:700;min-height:14px}
+  .key-state.ok{color:var(--ok)}
+  .key-state.bad{color:var(--danger)}
+  .key-hint{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.7}
+  .key-hint a{color:var(--accent);text-decoration:none}
+
+  .stage-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+  .out-label{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--muted);font-weight:700}
+  .out-label .tag{font-size:10px;font-weight:800;border-radius:99px;padding:2px 10px;background:var(--ok-soft);color:var(--ok)}
+  textarea.out{
+    width:100%;min-height:120px;resize:vertical;font-family:inherit;font-size:14px;line-height:2;
+    background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 13px;
+  }
+  textarea.out:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea.out::placeholder{color:#A6B3C6}
+  textarea.out.ok-border{border-color:#A9DEC9;background:#FBFFFD}
+
+  .dock{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .mic-wrap{position:relative;width:64px;height:64px;flex-shrink:0}
+  .mic-ring{position:absolute;inset:0}
+  .mic-btn{position:absolute;inset:6px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(160deg,#2563EB,#1D4ED8);color:#fff;display:grid;place-items:center;transition:.2s;box-shadow:0 3px 10px rgba(37,99,235,.35)}
+  .mic-btn svg{width:22px;height:22px}
+  body.recording .mic-btn{background:linear-gradient(160deg,#F59E0B,#D97706);box-shadow:0 3px 10px rgba(217,119,6,.35)}
+  .mic-btn:disabled{opacity:.5;cursor:wait}
+  .dock-info{flex:1;min-width:140px}
+  .dock-info b{font-size:13px;display:block;margin-bottom:2px}
+  .dock-info span{font-size:11.5px;color:var(--muted)}
+
+  .busy-line{display:none;align-items:center;gap:9px;font-size:12px;color:var(--accent);background:var(--accent-soft);border:1px dashed var(--accent-line);border-radius:9px;padding:8px 13px}
+  .busy-line.show{display:flex}
+  .spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--accent);border-inline-start-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;align-items:center;min-height:26px}
+  .chips .lbl{font-size:11px;color:var(--muted);font-weight:700}
+  .chip{font-size:11px;font-weight:700;border-radius:99px;padding:3px 11px;background:var(--live-soft);color:#B45309;border:1px solid #F5DCB6}
+
+  /* ---------- form & ticket ---------- */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 18px}
+  @media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+  .form-grid .full{grid-column:1/-1}
+  .form-grid input,.form-grid select,.form-grid textarea{padding:9px 12px;font-size:13px}
+  .ai-note{
+    display:none;margin:12px 18px 0;padding:9px 14px;border-radius:10px;font-size:12px;
+    background:var(--ok-soft);color:var(--ok);border:1px solid #BBE7D4;
+  }
+  .ai-note.show{display:block}
+  .ticket-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:14px 18px 4px}
+  @media(max-width:560px){.ticket-grid{grid-template-columns:1fr}}
+  .ticket-grid .full{grid-column:1/-1}
+  .ticket-grid input,.ticket-grid select,.ticket-grid textarea{padding:9px 12px;font-size:13px}
+  .ticket-foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 18px 16px}
+
+  /* ---------- tickets table ---------- */
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:680px}
+  th{font-size:11px;color:var(--muted);font-weight:700;text-align:right;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--soft);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.tid{font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .badge{display:inline-block;font-size:10.5px;font-weight:800;border-radius:99px;padding:3px 11px;white-space:nowrap}
+  .b-low{background:var(--ok-soft);color:var(--ok)}
+  .b-mid{background:var(--accent-soft);color:var(--accent)}
+  .b-high{background:var(--live-soft);color:#B45309}
+  .b-crit{background:var(--danger-soft);color:var(--danger)}
+  .b-open{background:var(--accent-soft);color:var(--accent)}
+  .b-type{background:#F1F5F9;color:#475569}
+  .empty-tbl{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+  .del{cursor:pointer;border:none;background:none;color:var(--muted);font-size:15px;padding:2px 6px;border-radius:6px}
+  .del:hover{color:var(--danger);background:var(--danger-soft)}
+
+  .err{display:none;background:var(--danger-soft);border:1px solid #F2C4C4;color:var(--danger);border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.9}
+  body.has-err .err{display:block}
+  .toast{
+    position:fixed;bottom:22px;inset-inline-start:50%;transform:translateX(50%);
+    background:#1C2A3A;color:#fff;font-size:13px;padding:11px 20px;border-radius:11px;
+    box-shadow:0 6px 20px rgba(28,42,58,.3);opacity:0;pointer-events:none;transition:.3s;z-index:50;
+  }
+  .toast.show{opacity:1}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">ب</div>
+    <div>
+      <h1>سامانه مرکز تماس</h1>
+      <small>بیمه هوشمند فردا — خط لوله سه‌مرحله‌ای هوش مصنوعی</small>
+    </div>
+  </div>
+  <div class="session">
+    <div class="status-pill"><span class="status-dot"></span><span id="statusText">آماده</span></div>
+    <div>مدت تماس <span class="timer" id="timer">۰۰:۰۰</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="err" id="errBox"></div>
+
+  <div class="grid">
+    <!-- ================= ستون خط لوله (مراحل ۱ و ۲) ================= -->
+    <div class="col">
+
+      <!-- ========== مرحله ۱: گفتار به متن ========== -->
+      <section class="card">
+        <div class="card-head">
+          <h2><span class="step">۱</span> گفتار به متن (STT)</h2>
+          <div class="card-actions">
+            <button class="btn ghost" id="demoBtn">متن نمونه</button>
+            <button class="btn ghost" id="clearRawBtn">پاک‌کردن</button>
+          </div>
+        </div>
+        <div class="model-bar">
+          <div class="field">
+            <label for="sttModel">مدل تشخیص گفتار</label>
+            <select id="sttModel">
+              <option value="scribe" selected>ElevenLabs Scribe v2 — دقیق‌ترین فارسی</option>
+              <option value="groq-whisper">Groq Whisper Large-v3 (رایگان)</option>
+              <option value="gpt4o-stt">OpenAI GPT-4o Transcribe</option>
+            </select>
+          </div>
+          <div class="field">
+            <label id="sttKeyLbl" for="sttKey">کلید سرویس</label>
+            <input type="password" id="sttKey" placeholder="کلید API" autocomplete="off">
+            <div class="key-state" id="sttKeyState"></div>
+            <div class="key-hint" id="sttKeyHint"></div>
+          </div>
+        </div>
+        <div class="stage-body">
+          <div class="dock">
+            <div class="mic-wrap">
+              <canvas class="mic-ring" id="ring" width="128" height="128"></canvas>
+              <button class="mic-btn" id="micBtn" aria-label="شروع یا توقف ضبط">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <rect x="9" y="2" width="6" height="12" rx="3"/>
+                  <path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v4M8 22h8"/>
+                </svg>
+              </button>
+            </div>
+            <div class="dock-info">
+              <b id="dockTitle">شروع ضبط</b>
+              <span id="dockSub">کلیک کنید، صحبت کنید، و برای پایان دوباره کلیک کنید</span>
+            </div>
+            <input type="file" id="fileInput" accept="audio/*,video/mp4,.m4a,.mp3,.wav,.ogg,.webm,.aac,.flac,.amr" hidden>
+            <button class="btn" id="uploadBtn">⬆ آپلود فایل صوتی</button>
+          </div>
+          <div class="busy-line" id="sttBusy"><span class="spinner"></span><span id="sttBusyTxt">در حال تبدیل صدا به متن…</span></div>
+          <div>
+            <div class="out-label"><span>خروجی: متن خام (قابل ویرایش)</span></div>
+            <textarea class="out" id="rawText" placeholder="متن خام تبدیل‌شده اینجا نمایش داده می‌شود…&#10;ضبط‌های پیاپی به انتهای همین متن اضافه می‌شوند."></textarea>
+          </div>
+          <div class="chips" id="chips"><span class="lbl">موضوعات:</span><span style="font-size:11.5px;color:var(--muted)">—</span></div>
+        </div>
+      </section>
+
+      <!-- ========== مرحله ۲: ویرایش متن با LLM ========== -->
+      <section class="card">
+        <div class="card-head">
+          <h2><span class="step">۲</span> ویرایش متن بر اساس دستور زبان فارسی</h2>
+        </div>
+        <div class="model-bar">
+          <div class="field">
+            <label for="polishModel">مدل ویرایش</label>
+            <select id="polishModel">
+              <option value="or-kimi" selected>Kimi K2.6 — OpenRouter (رایگان، فارسی قوی)</option>
+              <option value="or-deepseek">DeepSeek V3.1 — OpenRouter (رایگان)</option>
+              <option value="or-qwen">Qwen3 235B — OpenRouter (رایگان)</option>
+              <option value="or-llama4">Llama 4 Maverick — OpenRouter (رایگان)</option>
+              <option value="groq-oss">GPT-OSS-120B — Groq (رایگان)</option>
+              <option value="claude">Claude Sonnet 4.6 — Anthropic</option>
+              <option value="gpt51">GPT-5.1 — OpenAI</option>
+            </select>
+          </div>
+          <div class="field">
+            <label id="polishKeyLbl" for="polishKey">کلید سرویس</label>
+            <input type="password" id="polishKey" placeholder="کلید API" autocomplete="off">
+            <div class="key-state" id="polishKeyState"></div>
+            <div class="key-hint" id="polishKeyHint"></div>
+          </div>
+        </div>
+        <div class="stage-body">
+          <button class="btn primary big" id="polishBtn">✦ ویرایش و تصحیح متن خام</button>
+          <div class="busy-line" id="polishBusy"><span class="spinner"></span><span>در حال تصحیح دستور زبان، نیم‌فاصله‌ها، نشانه‌گذاری و اعداد…</span></div>
+          <div>
+            <div class="out-label">
+              <span>خروجی: متن ویرایش‌شده (قابل ویرایش — ورودی مرحله ۳)</span>
+              <span class="tag" id="polishTag" style="display:none">✦ ویرایش شد</span>
+            </div>
+            <textarea class="out" id="polishedText" placeholder="نتیجه ویرایش اینجا نمایش داده می‌شود — متن خام بالا دست‌نخورده می‌ماند تا قبل/بعد را مقایسه کنید."></textarea>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ================= ستون مرحله ۳: استخراج، فرم و تیکت ================= -->
+    <div class="col">
+      <section class="card">
+        <div class="card-head">
+          <h2><span class="step">۳</span> استخراج اطلاعات و پر کردن فرم‌ها</h2>
+        </div>
+        <div class="model-bar">
+          <div class="field">
+            <label for="extractModel">مدل استخراج</label>
+            <select id="extractModel">
+              <option value="groq-oss" selected>GPT-OSS-120B — Groq (رایگان، سریع)</option>
+              <option value="or-kimi">Kimi K2.6 — OpenRouter (رایگان)</option>
+              <option value="or-deepseek">DeepSeek V3.1 — OpenRouter (رایگان)</option>
+              <option value="claude">Claude Sonnet 4.6 — قوی‌ترین</option>
+              <option value="gpt51">GPT-5.1 — OpenAI</option>
+            </select>
+          </div>
+          <div class="field">
+            <label id="extractKeyLbl" for="extractKey">کلید سرویس</label>
+            <input type="password" id="extractKey" placeholder="کلید API" autocomplete="off">
+            <div class="key-state" id="extractKeyState"></div>
+            <div class="key-hint" id="extractKeyHint"></div>
+          </div>
+        </div>
+        <div class="stage-body" style="padding-bottom:0">
+          <button class="btn primary big" id="extractBtn">⤓ استخراج از متن ویرایش‌شده و پر کردن فرم‌ها</button>
+          <div class="busy-line" id="extractBusy"><span class="spinner"></span><span>در حال تحلیل مکالمه و استخراج اطلاعات…</span></div>
+        </div>
+        <div class="ai-note" id="aiNote">✦ فرم‌ها به‌صورت خودکار پر شدند — لطفاً پیش از ثبت، صحت اطلاعات را بررسی کنید.</div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="fType">نوع درخواست</label>
+            <select id="fType">
+              <option value="">— انتخاب کنید —</option>
+              <option>فروش</option><option>پشتیبانی</option><option>اعلام خسارت</option><option>تمدید</option><option>شکایت</option><option>سایر</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fProduct">نوع بیمه / محصول</label>
+            <input id="fProduct" placeholder="مثلاً بیمه شخص ثالث">
+          </div>
+          <div class="field">
+            <label for="fName">نام مشتری</label>
+            <input id="fName" placeholder="نام و نام خانوادگی">
+          </div>
+          <div class="field">
+            <label for="fPhone">شماره تماس</label>
+            <input id="fPhone" placeholder="۰۹…" inputmode="tel">
+          </div>
+          <div class="field">
+            <label for="fPlate">شماره پلاک</label>
+            <input id="fPlate" placeholder="مثلاً ۳۵ ایران ۶۶ — ۷۴۲ ب ۱۲">
+          </div>
+          <div class="field">
+            <label for="fPolicy">شماره بیمه‌نامه</label>
+            <input id="fPolicy" placeholder="—">
+          </div>
+          <div class="field full">
+            <label for="fDesc">شرح درخواست</label>
+            <textarea id="fDesc" rows="2" placeholder="خلاصه‌ای از درخواست مشتری…"></textarea>
+          </div>
+        </div>
+
+        <div class="card-head" style="border-top:1px solid var(--line-2)">
+          <h2 style="font-size:12.5px;color:var(--muted)">تیکت</h2>
+        </div>
+        <div class="ticket-grid">
+          <div class="field full">
+            <label for="tTitle">عنوان تیکت</label>
+            <input id="tTitle" placeholder="عنوان کوتاه و گویا">
+          </div>
+          <div class="field">
+            <label for="tPriority">اولویت</label>
+            <select id="tPriority">
+              <option>کم</option><option selected>متوسط</option><option>زیاد</option><option>بحرانی</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tSeverity">شدت</label>
+            <select id="tSeverity">
+              <option selected>جزئی</option><option>متوسط</option><option>شدید</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tCategory">دسته‌بندی</label>
+            <select id="tCategory">
+              <option>فروش جدید</option><option>تمدید</option><option>خسارت</option><option>پشتیبانی فنی</option><option>مالی</option><option>شکایت</option><option>سایر</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="tSummary">خلاصه تیکت</label>
+            <textarea id="tSummary" rows="3" placeholder="خلاصه وضعیت و اقدام موردنیاز…"></textarea>
+          </div>
+          <div class="field full">
+            <label for="tAction">اقدام بعدی پیشنهادی</label>
+            <input id="tAction" placeholder="مثلاً ارسال لینک پرداخت استعلام">
+          </div>
+        </div>
+        <div class="ticket-foot">
+          <button class="btn" id="resetTicketBtn">پاک‌کردن فرم‌ها</button>
+          <button class="btn primary" id="saveTicketBtn">✓ ثبت تیکت</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= لیست تیکت‌ها ================= -->
+  <section class="card">
+    <div class="card-head">
+      <h2><span class="step" style="background:#64748B">۴</span> تیکت‌های ثبت‌شده</h2>
+      <span style="font-size:12px;color:var(--muted)" id="tCount"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table id="ticketsTable" style="display:none">
+        <thead>
+          <tr>
+            <th>شناسه</th><th>عنوان</th><th>نوع</th><th>اولویت</th><th>شدت</th><th>مشتری</th><th>زمان ثبت</th><th>وضعیت</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="ticketsBody"></tbody>
+      </table>
+      <div class="empty-tbl" id="ticketsEmpty">هنوز تیکتی ثبت نشده است</div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const errBox = $('errBox'), toast = $('toast');
+  const faDigits = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+  const pad = n => String(n).padStart(2,'0');
+
+  function showToast(msg){
+    toast.textContent = msg; toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 2600);
+  }
+  function showErr(msg){
+    errBox.textContent = msg;
+    document.body.classList.add('has-err');
+    window.scrollTo({top:0,behavior:'smooth'});
+    setTimeout(()=>document.body.classList.remove('has-err'), 12000);
+  }
+
+  /* ================================================================
+     رجیستری سرویس‌ها و مدل‌ها — هر مرحله مدل مستقل خود را دارد
+  ================================================================ */
+  const SERVICES = {
+    groq:       {name:'Groq',           keyUrl:'https://console.groq.com/keys',                 free:'رایگان'},
+    elevenlabs: {name:'ElevenLabs',     keyUrl:'https://elevenlabs.io/app/settings/api-keys',   free:'پلن رایگان دارد'},
+    openai:     {name:'OpenAI',         keyUrl:'https://platform.openai.com/api-keys',          free:'پولی'},
+    anthropic:  {name:'Anthropic',      keyUrl:'https://console.anthropic.com/settings/keys',   free:'پولی'},
+    openrouter: {name:'OpenRouter',     keyUrl:'https://openrouter.ai/keys',                    free:'رایگان — بدون کارت بانکی'}
+  };
+
+  // مدل‌های گفتار به متن
+  const STT_MODELS = {
+    'scribe':      {service:'elevenlabs', url:'https://api.elevenlabs.io/v1/speech-to-text', model:'scribe_v2', fallbackModel:'scribe_v1'},
+    'groq-whisper':{service:'groq', url:'https://api.groq.com/openai/v1/audio/transcriptions', model:'whisper-large-v3'},
+    'gpt4o-stt':   {service:'openai', url:'https://api.openai.com/v1/audio/transcriptions', model:'gpt-4o-transcribe'}
+  };
+
+  // مدل‌های متنی (برای مرحله ۲ ویرایش و مرحله ۳ استخراج)
+  const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
+  const OR_FALLBACKS = ['moonshotai/kimi-k2.6:free','deepseek/deepseek-chat-v3.1:free','qwen/qwen3-235b-a22b:free','meta-llama/llama-4-maverick:free'];
+  const LLM_MODELS = {
+    'or-kimi':    {service:'openrouter', url:OR_URL, models:['moonshotai/kimi-k2.6:free','moonshotai/kimi-k2:free',...OR_FALLBACKS]},
+    'or-deepseek':{service:'openrouter', url:OR_URL, models:['deepseek/deepseek-chat-v3.1:free','deepseek/deepseek-chat-v3-0324:free',...OR_FALLBACKS]},
+    'or-qwen':    {service:'openrouter', url:OR_URL, models:['qwen/qwen3-235b-a22b:free',...OR_FALLBACKS]},
+    'or-llama4':  {service:'openrouter', url:OR_URL, models:['meta-llama/llama-4-maverick:free',...OR_FALLBACKS]},
+    'groq-oss':   {service:'groq', url:'https://api.groq.com/openai/v1/chat/completions', models:['openai/gpt-oss-120b'], reasoning:'low'},
+    'claude':     {service:'anthropic', models:['claude-sonnet-4-6']},
+    'gpt51':      {service:'openai', url:'https://api.openai.com/v1/chat/completions', models:['gpt-5.1']}
+  };
+
+  /* ---------- کلیدها: هر سرویس یک کلید، مشترک بین مراحل ---------- */
+  const keys = {};
+  try{
+    for (const s of Object.keys(SERVICES)) keys[s] = localStorage.getItem('key_'+s) || '';
+  }catch(e){}
+
+  // اتصال هر مرحله به فیلد کلید خودش
+  const STAGES = [
+    {sel:'sttModel',     registry:STT_MODELS, key:'sttKey',     lbl:'sttKeyLbl',     hint:'sttKeyHint',     state:'sttKeyState',     store:'stage_stt'},
+    {sel:'polishModel',  registry:LLM_MODELS, key:'polishKey',  lbl:'polishKeyLbl',  hint:'polishKeyHint',  state:'polishKeyState',  store:'stage_polish'},
+    {sel:'extractModel', registry:LLM_MODELS, key:'extractKey', lbl:'extractKeyLbl', hint:'extractKeyHint', state:'extractKeyState', store:'stage_extract'}
+  ];
+  function specOf(stage){ return stage.registry[$(stage.sel).value]; }
+  function refreshStageKey(stage){
+    const s = specOf(stage).service;
+    $(stage.lbl).textContent = 'کلید '+SERVICES[s].name+' ('+SERVICES[s].free+')';
+    $(stage.hint).innerHTML = 'دریافت کلید: <a href="'+SERVICES[s].keyUrl+'" target="_blank" rel="noopener">'+SERVICES[s].keyUrl.replace('https://','')+'</a>';
+    $(stage.key).value = keys[s] || '';
+    $(stage.state).textContent = '';
+    try{ localStorage.setItem(stage.store, $(stage.sel).value); }catch(e){}
+  }
+  function syncKeyEverywhere(service){
+    for (const st of STAGES){
+      if (specOf(st).service === service) $(st.key).value = keys[service];
+    }
+  }
+  for (const st of STAGES){
+    try{
+      const saved = localStorage.getItem(st.store);
+      if (saved && st.registry[saved]) $(st.sel).value = saved;
+    }catch(e){}
+    $(st.sel).onchange = () => refreshStageKey(st);
+    $(st.key).oninput = () => {
+      const s = specOf(st).service;
+      keys[s] = $(st.key).value.trim();
+      try{ localStorage.setItem('key_'+s, keys[s]); }catch(e){}
+      syncKeyEverywhere(s);
+    };
+    refreshStageKey(st);
+  }
+  function requireKey(stage, what){
+    const s = specOf(stage).service;
+    if (!keys[s]){
+      showErr('کلید '+SERVICES[s].name+' برای '+what+' لازم است: '+SERVICES[s].keyUrl);
+      $(stage.key).focus();
+      return null;
+    }
+    return keys[s];
+  }
+  function setKeyState(stage, ok){
+    const el = $(stage.state);
+    el.className = 'key-state '+(ok?'ok':'bad');
+    el.textContent = ok ? 'کلید معتبر ✓' : 'کلید نامعتبر';
+  }
+
+  /* ---------- وضعیت کلی و تایمر ---------- */
+  const micBtn = $('micBtn');
+  function setUI(state){
+    document.body.classList.toggle('recording', state==='rec');
+    document.body.classList.toggle('busy', state==='busy');
+    micBtn.disabled = state==='busy';
+    $('statusText').textContent = state==='rec' ? 'در حال ضبط' : state==='busy' ? 'در حال پردازش…' : 'آماده';
+    $('dockTitle').textContent  = state==='rec' ? 'در حال ضبط…' : state==='busy' ? 'در حال پردازش…' : 'شروع ضبط';
+    $('dockSub').textContent    = state==='rec' ? 'صحبت کنید؛ برای پایان دوباره کلیک کنید'
+                                : state==='busy' ? 'لطفاً کمی صبر کنید'
+                                : 'کلیک کنید، صحبت کنید، و برای پایان دوباره کلیک کنید';
+  }
+  let callStart=null, timerInt=null;
+  function startTimer(){
+    if (timerInt) return;
+    callStart = callStart || Date.now();
+    timerInt = setInterval(()=>{
+      const s = Math.floor((Date.now()-callStart)/1000);
+      $('timer').textContent = faDigits(pad(Math.floor(s/60))+':'+pad(s%60));
+    },500);
+  }
+
+  /* ---------- موضوعات (کلیدواژه‌های بیمه‌ای) ---------- */
+  const KEYWORDS = {
+    'شخص ثالث':'بیمه شخص ثالث','ثالث':'بیمه شخص ثالث','بدنه':'بیمه بدنه','عمر':'بیمه عمر',
+    'آتش‌سوزی':'آتش‌سوزی','آتش سوزی':'آتش‌سوزی','خسارت':'اعلام خسارت','تمدید':'تمدید بیمه‌نامه',
+    'استعلام':'استعلام قیمت','پلاک':'شماره پلاک','تخفیف':'تخفیف عدم خسارت','اقساط':'پرداخت اقساطی','قسط':'پرداخت اقساطی'
+  };
+  function renderChips(){
+    const text = $('rawText').value + ' ' + $('polishedText').value;
+    const topics = new Set();
+    for (const [kw, topic] of Object.entries(KEYWORDS)) if (text.includes(kw)) topics.add(topic);
+    $('chips').innerHTML = '<span class="lbl">موضوعات:</span>' + (topics.size
+      ? [...topics].map(t=>`<span class="chip">${t}</span>`).join('')
+      : '<span style="font-size:11.5px;color:var(--muted)">—</span>');
+  }
+  $('rawText').addEventListener('input', renderChips);
+  $('polishedText').addEventListener('input', renderChips);
+
+  /* ================================================================
+     مرحله ۱ — گفتار به متن
+  ================================================================ */
+  const sttStage = STAGES[0];
+  function appendRaw(text){
+    const ta = $('rawText');
+    ta.value = (ta.value ? ta.value.trimEnd() + '\n' : '') + text.trim();
+    ta.scrollTop = ta.scrollHeight;
+    renderChips();
+  }
+  function sttBusy(on, label){
+    $('sttBusy').classList.toggle('show', !!on);
+    if (label) $('sttBusyTxt').textContent = label;
+  }
+
+  // --- ضبط میکروفون با نمایشگر سطح صدا ---
+  const ring = $('ring'), rctx = ring.getContext('2d');
+  let audioCtx=null, analyser=null, levelRAF=null;
+  function drawRing(level){
+    rctx.clearRect(0,0,128,128);
+    rctx.beginPath(); rctx.arc(64,64,57,0,Math.PI*2);
+    rctx.strokeStyle='rgba(28,42,58,.08)'; rctx.lineWidth=4; rctx.stroke();
+    if (level>0){
+      rctx.beginPath();
+      rctx.arc(64,64,57,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(level*2.2,1));
+      rctx.strokeStyle='#D97706'; rctx.lineWidth=4; rctx.lineCap='round'; rctx.stroke();
+    }
+  }
+  drawRing(0);
+
+  let mediaRecorder=null, micStream=null, chunks=[], recording=false, recStartedAt=0;
+  function pickMime(){
+    const cands=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];
+    for (const m of cands) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+    return '';
+  }
+  async function startRec(){
+    if (!requireKey(sttStage, 'تبدیل گفتار')) return;
+    if (!navigator.mediaDevices?.getUserMedia){
+      showErr('این مرورگر از ضبط صدا پشتیبانی نمی‌کند. صفحه باید روی آدرس https باز شده باشد.');
+      return;
+    }
+    try{ micStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+    catch(e){ showErr('دسترسی به میکروفون رد شد. از تنظیمات مرورگر اجازه میکروفون را فعال کنید.'); return; }
+    try{
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser(); analyser.fftSize=256;
+      audioCtx.createMediaStreamSource(micStream).connect(analyser);
+      const buf = new Uint8Array(analyser.frequencyBinCount);
+      (function loop(){
+        analyser.getByteFrequencyData(buf);
+        drawRing(buf.reduce((a,b)=>a+b,0)/buf.length/255);
+        levelRAF = requestAnimationFrame(loop);
+      })();
+    }catch(e){}
+    chunks=[];
+    const mime = pickMime();
+    mediaRecorder = new MediaRecorder(micStream, mime?{mimeType:mime}:undefined);
+    mediaRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = onRecStopped;
+    mediaRecorder.start();
+    recording=true; recStartedAt=Date.now();
+    setUI('rec'); startTimer();
+  }
+  function stopRec(){
+    recording=false;
+    cancelAnimationFrame(levelRAF); drawRing(0);
+    try{ mediaRecorder?.stop(); }catch(e){}
+    micStream?.getTracks().forEach(t=>t.stop());
+    audioCtx?.close(); audioCtx=null;
+  }
+  async function onRecStopped(){
+    if (Date.now()-recStartedAt < 600){ setUI('idle'); return; }
+    const mime = mediaRecorder.mimeType || 'audio/webm';
+    const ext = mime.includes('mp4')?'mp4':mime.includes('ogg')?'ogg':'webm';
+    await transcribe(new Blob(chunks,{type:mime}), 'audio.'+ext);
+  }
+  micBtn.onclick = () => recording ? stopRec() : startRec();
+
+  const fileInput = $('fileInput'), uploadBtn = $('uploadBtn');
+  uploadBtn.onclick = () => { if (requireKey(sttStage, 'تبدیل گفتار')) fileInput.click(); };
+  fileInput.onchange = async () => {
+    const file = fileInput.files?.[0]; fileInput.value='';
+    if (!file) return;
+    if (file.size > 25*1024*1024){ showErr('حجم فایل بیشتر از ۲۵ مگابایت است. فایل را کوتاه‌تر یا فشرده کنید.'); return; }
+    startTimer(); uploadBtn.disabled = true;
+    await transcribe(file, file.name, 'در حال تبدیل فایل «'+(file.name.length>28?file.name.slice(0,25)+'…':file.name)+'»');
+    uploadBtn.disabled = false;
+  };
+
+  const STT_DOMAIN_PROMPT = 'مکالمه مرکز تماس شرکت بیمه. اصطلاحات: بیمه شخص ثالث، بیمه بدنه، بیمه عمر، بیمه‌نامه، تخفیف عدم خسارت، اعلام خسارت، تمدید، استعلام قیمت، پرداخت اقساطی، شماره پلاک، فرانشیز، الحاقیه.';
+
+  async function transcribe(blob, filename, busyLabel){
+    const spec = specOf(sttStage);
+    const key = requireKey(sttStage, 'تبدیل گفتار'); if (!key) return;
+    setUI('busy'); sttBusy(true, busyLabel || 'در حال تبدیل صدا به متن…');
+    try{
+      let res;
+      if (spec.service === 'elevenlabs'){
+        res = await elevenlabsSTT(spec.url, key, blob, filename, spec.model);
+        if (!res.ok && spec.fallbackModel && [400,404,422].includes(res.status)){
+          res = await elevenlabsSTT(spec.url, key, blob, filename, spec.fallbackModel);
+        }
+      } else {
+        const form = new FormData();
+        form.append('file', blob, filename);
+        form.append('model', spec.model);
+        form.append('language', 'fa');
+        form.append('prompt', STT_DOMAIN_PROMPT);
+        form.append('temperature','0');
+        form.append('response_format','json');
+        res = await fetch(spec.url, {method:'POST', headers:{'Authorization':'Bearer '+key}, body:form});
+      }
+      sttBusy(false);
+      if (!res.ok){
+        setKeyState(sttStage, false);
+        if (res.status===401) showErr('کلید '+SERVICES[spec.service].name+' نامعتبر است (401).');
+        else if (res.status===429) showErr('سقف درخواست‌های سرویس گفتار پر شده (429). کمی صبر کنید.');
+        else showErr('خطای سرویس گفتار ('+res.status+').');
+        setUI('idle'); return;
+      }
+      setKeyState(sttStage, true);
+      const data = await res.json();
+      const text = (data.text||'').trim();
+      if (text){ appendRaw(text); showToast('متن خام آماده شد — حالا مرحله ۲ را اجرا کنید'); }
+      else showErr('صدایی تشخیص داده نشد.');
+    }catch(e){
+      sttBusy(false);
+      showErr('ارتباط با سرویس گفتار برقرار نشد. اینترنت (و در صورت نیاز VPN) را بررسی کنید.');
+    }
+    setUI('idle');
+  }
+  function elevenlabsSTT(url, key, blob, filename, modelId){
+    const form = new FormData();
+    form.append('file', blob, filename);
+    form.append('model_id', modelId);
+    form.append('language_code','fa');
+    form.append('tag_audio_events','false');
+    form.append('diarize','false');
+    return fetch(url, {method:'POST', headers:{'xi-api-key': key}, body:form});
+  }
+
+  /* ================================================================
+     تماس عمومی با مدل‌های متنی (با زنجیره مدل پشتیبان)
+  ================================================================ */
+  async function callLLM(stage, sys, userMsg, maxTokens, jsonMode){
+    const spec = specOf(stage);
+    const key = keys[spec.service];
+    if (!key) return {ok:false, status:0, text:''};
+    if (spec.service === 'anthropic'){
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'x-api-key': key,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true',
+          'Content-Type':'application/json'
+        },
+        body: JSON.stringify({model:spec.models[0], max_tokens:maxTokens||1500, system:sys, messages:[{role:'user', content:userMsg}]})
+      });
+      if (!res.ok) return {ok:false, status:res.status, text:''};
+      const data = await res.json();
+      return {ok:true, status:200, text:(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')};
+    }
+    // OpenAI-compatible: Groq، OpenAI، OpenRouter — با زنجیره مدل پشتیبان
+    const headers = {'Authorization':'Bearer '+key, 'Content-Type':'application/json'};
+    if (spec.service === 'openrouter') headers['X-Title'] = 'CallCenter Demo';
+    let lastStatus = 0;
+    for (const model of spec.models){
+      const body = {model, messages:[{role:'system',content:sys},{role:'user',content:userMsg}]};
+      if (jsonMode && spec.service !== 'openrouter') body.response_format = {type:'json_object'};
+      if (spec.service === 'groq') body.temperature = 0.2;
+      if (spec.reasoning) body.reasoning_effort = spec.reasoning;
+      const res = await fetch(spec.url, {method:'POST', headers, body: JSON.stringify(body)});
+      if (res.ok){
+        const data = await res.json();
+        const text = data.choices?.[0]?.message?.content || '';
+        if (text) return {ok:true, status:200, text};
+        lastStatus = 200; continue;
+      }
+      lastStatus = res.status;
+      if (![400,404,429,503].includes(res.status)) break; // خطای غیرقابل جبران
+    }
+    return {ok:false, status:lastStatus, text:''};
+  }
+
+  /* ================================================================
+     مرحله ۲ — ویرایش متن بر اساس دستور زبان فارسی
+  ================================================================ */
+  const polishStage = STAGES[1];
+  const POLISH_SYS = 'تو ویراستار حرفه‌ای زبان فارسی هستی و خروجی خام سیستم تبدیل گفتار به متن یک مرکز تماس بیمه را ویرایش می‌کنی. متن را بر اساس دستور زبان معیار فارسی تصحیح کن: ۱) املای درست واژه‌ها با توجه به بافت بیمه‌ای (مثلاً «شخصی ثالث» → «شخص ثالث»، «بیمه‌ نامه» → «بیمه‌نامه»). ۲) نیم‌فاصله‌های درست (می‌خواهم، بیمه‌نامه، تخفیف‌ها). ۳) جایگاه درست «را»ی مفعولی. ۴) تطابق فعل و فاعل و زمان درست افعال. ۵) حروف اضافه درست. ۶) نشانه‌گذاری معیار (ویرگول، نقطه، علامت سؤال). ۷) اعداد گفتاری به رقم فارسی (شماره تلفن، پلاک، مبلغ، تاریخ). ۸) حذف تکرارها و کلمات شکسته ناشی از خطای تشخیص. قواعد سخت: معنی را تغییر نده، جمله‌ای اضافه یا حذف نکن، خلاصه نکن، لحن محاوره‌ای گوینده را به فارسی رسمی تبدیل نکن — فقط درست بنویس. فقط متن ویرایش‌شده را برگردان، بدون هیچ توضیح.';
+
+  $('polishBtn').onclick = async () => {
+    const raw = $('rawText').value.trim();
+    if (!raw){ showErr('ابتدا در مرحله ۱ متنی تولید کنید (ضبط، آپلود یا «متن نمونه»).'); return; }
+    if (!requireKey(polishStage, 'ویرایش متن')) return;
+    $('polishBtn').disabled = true;
+    $('polishBusy').classList.add('show');
+    setUI('busy');
+    try{
+      const r = await callLLM(polishStage, POLISH_SYS, raw, 1500, false);
+      $('polishBusy').classList.remove('show');
+      if (!r.ok){
+        setKeyState(polishStage, r.status!==401 ? true : false);
+        if (r.status===401) showErr('کلید سرویس ویرایش نامعتبر است (401).');
+        else if (r.status===429) showErr('سقف درخواست‌های مدل ویرایش پر شده (429). مدل دیگری را امتحان کنید.');
+        else showErr('ویرایش ناموفق بود ('+r.status+'). مدل دیگری را امتحان کنید.');
+      } else {
+        setKeyState(polishStage, true);
+        const cleaned = r.text.trim().replace(/^```[\s\S]*?\n|```$/g,'').trim();
+        if (cleaned && cleaned.length >= raw.length*0.4){
+          $('polishedText').value = cleaned;
+          $('polishedText').classList.add('ok-border');
+          $('polishTag').style.display='';
+          renderChips();
+          showToast('متن ویرایش شد ✓ — حالا مرحله ۳ را اجرا کنید');
+        } else {
+          showErr('خروجی مدل ویرایش نامعقول بود؛ مدل دیگری را امتحان کنید.');
+        }
+      }
+    }catch(e){
+      $('polishBusy').classList.remove('show');
+      showErr('ارتباط با سرویس ویرایش برقرار نشد. اینترنت (و در صورت نیاز VPN) را بررسی کنید.');
+    }
+    $('polishBtn').disabled = false;
+    setUI('idle');
+  };
+
+  /* ================================================================
+     مرحله ۳ — استخراج اطلاعات و پر کردن فرم‌ها
+  ================================================================ */
+  const extractStage = STAGES[2];
+  const EXTRACT_SYS = 'تو دستیار اپراتور مرکز تماس یک شرکت بیمه ایرانی هستی. متن مکالمه را تحلیل کن و فقط و فقط یک شیء JSON معتبر برگردان، بدون هیچ توضیح یا Markdown. ساختار دقیق: {"request_type":"فروش|پشتیبانی|اعلام خسارت|تمدید|شکایت|سایر","product":"","customer_name":"","phone":"","plate":"","policy_no":"","description":"","ticket":{"title":"","priority":"کم|متوسط|زیاد|بحرانی","severity":"جزئی|متوسط|شدید","category":"فروش جدید|تمدید|خسارت|پشتیبانی فنی|مالی|شکایت|سایر","summary":"","next_action":""}} . قواعد: اگر فیلدی در مکالمه نبود رشته خالی بگذار و هرگز حدس نزن. شماره تلفن گفتاری را به رقم تبدیل کن. پلاک گفتاری را به قالب استاندارد بنویس (مثلاً «۳۵ ایران ۶۶ — ۷۴۲ ب ۱۲»). اولویت را از فوریت واقعی مشتری استنتاج کن: خسارت فعال یا قطع پوشش = زیاد/بحرانی، استعلام عادی = متوسط. عنوان تیکت حداکثر ۸ کلمه و گویا باشد. خلاصه حداکثر دو جمله. اقدام بعدی یک جمله عملیاتی برای اپراتور. همه مقادیر فارسی باشند.';
+
+  function setIf(id, val){
+    if (val === undefined || val === null || String(val).trim()==='') return;
+    const el = $(id);
+    if (el.tagName==='SELECT'){
+      const opt = [...el.options].find(o => o.value===val || o.text===val || o.text.includes(val));
+      if (opt) el.value = opt.value || opt.text;
+    } else el.value = String(val).trim();
+  }
+
+  $('extractBtn').onclick = async () => {
+    const source = $('polishedText').value.trim() || $('rawText').value.trim();
+    if (!source){ showErr('ابتدا مراحل ۱ و ۲ را اجرا کنید — متنی برای استخراج وجود ندارد.'); return; }
+    if (!$('polishedText').value.trim()) showToast('نکته: متن ویرایش‌نشده استفاده شد (مرحله ۲ اجرا نشده)');
+    if (!requireKey(extractStage, 'استخراج اطلاعات')) return;
+    $('extractBtn').disabled = true;
+    $('extractBusy').classList.add('show');
+    setUI('busy');
+    try{
+      const r = await callLLM(extractStage, EXTRACT_SYS, 'متن مکالمه:\n'+source, 1500, true);
+      $('extractBusy').classList.remove('show');
+      if (!r.ok){
+        if (r.status===401){ setKeyState(extractStage, false); showErr('کلید سرویس استخراج نامعتبر است (401).'); }
+        else if (r.status===429) showErr('سقف درخواست‌های مدل استخراج پر شده (429). مدل دیگری را امتحان کنید.');
+        else showErr('استخراج ناموفق بود ('+r.status+').');
+      } else {
+        setKeyState(extractStage, true);
+        let raw = r.text.replace(/```json|```/g,'').trim();
+        const m = raw.match(/\{[\s\S]*\}/);
+        const j = JSON.parse(m ? m[0] : raw);
+        setIf('fType', j.request_type);
+        setIf('fProduct', j.product);
+        setIf('fName', j.customer_name);
+        setIf('fPhone', j.phone);
+        setIf('fPlate', j.plate);
+        setIf('fPolicy', j.policy_no);
+        setIf('fDesc', j.description);
+        if (j.ticket){
+          setIf('tTitle', j.ticket.title);
+          setIf('tPriority', j.ticket.priority);
+          setIf('tSeverity', j.ticket.severity);
+          setIf('tCategory', j.ticket.category);
+          setIf('tSummary', j.ticket.summary);
+          setIf('tAction', j.ticket.next_action);
+        }
+        $('aiNote').classList.add('show');
+        showToast('فرم‌ها پر شدند ✓ — بررسی و ثبت تیکت');
+      }
+    }catch(e){
+      $('extractBusy').classList.remove('show');
+      showErr('استخراج ناموفق بود. دوباره امتحان کنید یا مدل دیگری انتخاب کنید.');
+    }
+    $('extractBtn').disabled = false;
+    setUI('idle');
+  };
+
+  /* ================================================================
+     تیکت‌ها
+  ================================================================ */
+  let tickets = [];
+  try{ tickets = JSON.parse(localStorage.getItem('cc_tickets')||'[]'); }catch(e){ tickets=[]; }
+  let ticketSeq = tickets.reduce((m,t)=>Math.max(m, t.seq||0), 1000);
+  const PRIO_CLASS = {'کم':'b-low','متوسط':'b-mid','زیاد':'b-high','بحرانی':'b-crit'};
+  const SEV_CLASS  = {'جزئی':'b-low','متوسط':'b-mid','شدید':'b-crit'};
+  const esc = s => String(s||'').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  function persist(){ try{ localStorage.setItem('cc_tickets', JSON.stringify(tickets)); }catch(e){} }
+  function renderTickets(){
+    const body = $('ticketsBody');
+    $('ticketsTable').style.display = tickets.length ? '' : 'none';
+    $('ticketsEmpty').style.display = tickets.length ? 'none' : '';
+    $('tCount').textContent = tickets.length ? faDigits(tickets.length)+' تیکت' : '';
+    body.innerHTML = tickets.map((t,i)=>`
+      <tr>
+        <td class="tid">${t.id}</td>
+        <td>${esc(t.title)}</td>
+        <td><span class="badge b-type">${esc(t.type||'—')}</span></td>
+        <td><span class="badge ${PRIO_CLASS[t.priority]||'b-mid'}">${esc(t.priority)}</span></td>
+        <td><span class="badge ${SEV_CLASS[t.severity]||'b-mid'}">${esc(t.severity)}</span></td>
+        <td>${esc(t.customer||'—')}</td>
+        <td style="white-space:nowrap;font-variant-numeric:tabular-nums">${t.time}</td>
+        <td><span class="badge b-open">باز</span></td>
+        <td><button class="del" data-i="${i}" aria-label="حذف تیکت" title="حذف">✕</button></td>
+      </tr>`).join('');
+    body.querySelectorAll('.del').forEach(b => b.onclick = () => {
+      tickets.splice(+b.dataset.i,1); persist(); renderTickets();
+    });
+  }
+  $('saveTicketBtn').onclick = () => {
+    const title = $('tTitle').value.trim();
+    if (!title){ showErr('عنوان تیکت را وارد کنید (یا مرحله ۳ را اجرا کنید).'); $('tTitle').focus(); return; }
+    ticketSeq++;
+    const d = new Date();
+    tickets.unshift({
+      seq: ticketSeq,
+      id: 'TCK-'+faDigits(ticketSeq),
+      title,
+      type: $('fType').value || $('tCategory').value,
+      priority: $('tPriority').value,
+      severity: $('tSeverity').value,
+      category: $('tCategory').value,
+      customer: $('fName').value.trim(),
+      summary: $('tSummary').value.trim(),
+      time: faDigits(d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate()))+' '+faDigits(pad(d.getHours())+':'+pad(d.getMinutes()))
+    });
+    persist(); renderTickets();
+    showToast('تیکت '+tickets[0].id+' ثبت شد ✓');
+    window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
+  };
+  $('resetTicketBtn').onclick = () => {
+    ['fType','fProduct','fName','fPhone','fPlate','fPolicy','fDesc','tTitle','tCategory','tSummary','tAction'].forEach(id=>{
+      const el = $(id);
+      if (el.tagName==='SELECT') el.selectedIndex = 0; else el.value='';
+    });
+    $('tPriority').selectedIndex = 1; $('tSeverity').selectedIndex = 0;
+    $('aiNote').classList.remove('show');
+  };
+  renderTickets();
+
+  /* ---------- متن نمونه و پاک‌کردن ---------- */
+  $('demoBtn').onclick = () => {
+    startTimer();
+    $('rawText').value =
+'تماس‌گیرنده: سلام وقت بخیر رضایی هستم میخواستم برای ماشینم استعلام قیمت بیمه شخصی ثالث بگیرم بیمه نامه قبلیم هم اخر همین ماه تمام میشود\n'+
+'اپراتور: سلام جناب رضایی خوش امدید حتما لطفا شماره پلاک خودرو را بفرمایید\n'+
+'تماس‌گیرنده: پلاک سی و پنج ایران شصت و شش هفتصد و چهل و دو ب دوازده شماره تماسم هم صفر نهصد و دوازده سیصد و چهل و پنج شصت و هفت هشتاد و نه است\n'+
+'اپراتور: ممنون بیمه نامه قبلی شما تخفیف عدم خسارت هشت سال دارد مایلید تمدید با پرداخت اقساط انجام شود\n'+
+'تماس‌گیرنده: بله اگر اقساط سه ماهه باشد عالی است لطفا لینک پرداخت را برایم پیامک کنید';
+    renderChips();
+    showToast('متن خام نمونه (با خطاهای عمدی ASR) آماده شد — مرحله ۲ را بزنید');
+  };
+  $('clearRawBtn').onclick = () => {
+    $('rawText').value=''; $('polishedText').value='';
+    $('polishedText').classList.remove('ok-border');
+    $('polishTag').style.display='none';
+    renderChips();
+  };
+})();
+</script>
+</body>
+</html>
