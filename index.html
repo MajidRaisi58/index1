@@ -114,6 +114,18 @@
   @media(max-width:560px){.form-grid{grid-template-columns:1fr}}
   .form-grid .full{grid-column:1/-1}
   .form-grid input,.form-grid select,.form-grid textarea{padding:9px 12px;font-size:13px}
+  .section-divider{
+    font-size:11.5px;font-weight:800;color:var(--muted);
+    border-top:1px dashed var(--line);padding-top:12px;margin-top:4px;
+  }
+  .photo-row{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
+  .photo-thumb{position:relative;width:74px;height:74px;border-radius:10px;overflow:hidden;border:1px solid var(--line);box-shadow:0 1px 3px rgba(28,42,58,.08)}
+  .photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo-thumb .rm{
+    position:absolute;top:3px;inset-inline-end:3px;width:20px;height:20px;border:none;border-radius:6px;
+    background:rgba(28,42,58,.65);color:#fff;font-size:11px;cursor:pointer;display:grid;place-items:center;
+  }
+  .photo-thumb .rm:hover{background:var(--danger)}
   .ai-note{
     display:none;margin:12px 18px 0;padding:9px 14px;border-radius:10px;font-size:12px;
     background:var(--ok-soft);color:var(--ok);border:1px solid #BBE7D4;
@@ -330,6 +342,47 @@
           <div class="field full">
             <label for="fDesc">شرح درخواست</label>
             <textarea id="fDesc" rows="2" placeholder="خلاصه‌ای از درخواست مشتری…"></textarea>
+          </div>
+
+          <div class="full section-divider">اطلاعات خودرو</div>
+          <div class="field">
+            <label for="vType">نوع</label>
+            <select id="vType">
+              <option value="">— انتخاب کنید —</option>
+              <option>سواری</option><option>وانت</option><option>ون</option><option>کامیون</option><option>کامیونت</option><option>اتوبوس</option><option>مینی بوس</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="vUsage">کاربری</label>
+            <select id="vUsage">
+              <option value="">— انتخاب کنید —</option>
+              <option>شخصی</option><option>تاکسی درون شهری</option><option>تاکسی برون شهری</option><option>تاکسی اینترنتی یا آژانس</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="vFuel">نوع سوخت</label>
+            <select id="vFuel">
+              <option value="">— انتخاب کنید —</option>
+              <option>بنزینی</option><option>گازسوز</option><option>دوگانه‌سوز کارخانه</option><option>دوگانه‌سوز دستی</option><option>هیبرید</option><option>دیزلی</option><option>برقی</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="vBrand">سیستم / برند</label>
+            <input id="vBrand" placeholder="مثلاً پژو، پراید، سمند">
+          </div>
+          <div class="field">
+            <label for="vModel">مدل / تیپ</label>
+            <input id="vModel" placeholder="مثلاً ۲۰۶ تیپ ۲">
+          </div>
+          <div class="field">
+            <label for="vYear">سال ساخت</label>
+            <input id="vYear" placeholder="مثلاً ۱۳۹۸" inputmode="numeric">
+          </div>
+          <div class="field full">
+            <label>تصاویر خودرو / مدارک</label>
+            <input type="file" id="vPhotos" accept="image/*" multiple hidden>
+            <button class="btn ghost" id="vPhotosBtn" type="button">📷 افزودن تصویر</button>
+            <div class="photo-row" id="photoRow"></div>
           </div>
         </div>
 
@@ -802,7 +855,7 @@
      مرحله ۳ — استخراج اطلاعات و پر کردن فرم‌ها
   ================================================================ */
   const extractStage = STAGES[2];
-  const EXTRACT_SYS = 'تو دستیار اپراتور مرکز تماس یک شرکت بیمه ایرانی هستی. متن مکالمه را تحلیل کن و فقط و فقط یک شیء JSON معتبر برگردان، بدون هیچ توضیح یا Markdown. ساختار دقیق: {"request_type":"فروش|پشتیبانی|اعلام خسارت|تمدید|شکایت|سایر","product":"","customer_name":"","phone":"","plate":"","policy_no":"","description":"","ticket":{"title":"","priority":"کم|متوسط|زیاد|بحرانی","severity":"جزئی|متوسط|شدید","category":"فروش جدید|تمدید|خسارت|پشتیبانی فنی|مالی|شکایت|سایر","summary":"","next_action":""}} . قواعد: اگر فیلدی در مکالمه نبود رشته خالی بگذار و هرگز حدس نزن. شماره تلفن گفتاری را به رقم تبدیل کن. پلاک گفتاری را به قالب استاندارد بنویس (مثلاً «۳۵ ایران ۶۶ — ۷۴۲ ب ۱۲»). اولویت را از فوریت واقعی مشتری استنتاج کن: خسارت فعال یا قطع پوشش = زیاد/بحرانی، استعلام عادی = متوسط. عنوان تیکت حداکثر ۸ کلمه و گویا باشد. خلاصه حداکثر دو جمله. اقدام بعدی یک جمله عملیاتی برای اپراتور. همه مقادیر فارسی باشند.';
+  const EXTRACT_SYS = 'تو دستیار اپراتور مرکز تماس یک شرکت بیمه ایرانی هستی. متن مکالمه را تحلیل کن و فقط و فقط یک شیء JSON معتبر برگردان، بدون هیچ توضیح یا Markdown. ساختار دقیق: {"request_type":"فروش|پشتیبانی|اعلام خسارت|تمدید|شکایت|سایر","product":"","customer_name":"","phone":"","plate":"","policy_no":"","description":"","vehicle":{"type":"سواری|وانت|ون|کامیون|کامیونت|اتوبوس|مینی بوس","usage":"شخصی|تاکسی درون شهری|تاکسی برون شهری|تاکسی اینترنتی یا آژانس","fuel":"بنزینی|گازسوز|دوگانه‌سوز کارخانه|دوگانه‌سوز دستی|هیبرید|دیزلی|برقی","brand":"","model":"","year":""},"ticket":{"title":"","priority":"کم|متوسط|زیاد|بحرانی","severity":"جزئی|متوسط|شدید","category":"فروش جدید|تمدید|خسارت|پشتیبانی فنی|مالی|شکایت|سایر","summary":"","next_action":""}} . قواعد: اگر فیلدی در مکالمه نبود رشته خالی بگذار و هرگز حدس نزن — تنها استثنا: اگر برند خودروی سواری شخصی متداول ذکر شد (مثل پراید، پژو ۲۰۶) می‌توانی type را «سواری» بگذاری. شماره تلفن گفتاری را به رقم تبدیل کن. پلاک گفتاری را به قالب استاندارد بنویس (مثلاً «۳۵ ایران ۶۶ — ۷۴۲ ب ۱۲»). سال ساخت را به عدد بنویس (شمسی یا میلادی، همان‌طور که مشتری گفت). برند و مدل را جدا کن (مثلاً برند «پژو»، مدل «۲۰۶ تیپ ۲»). اولویت را از فوریت واقعی مشتری استنتاج کن: خسارت فعال یا قطع پوشش = زیاد/بحرانی، استعلام عادی = متوسط. عنوان تیکت حداکثر ۸ کلمه و گویا باشد. خلاصه حداکثر دو جمله. اقدام بعدی یک جمله عملیاتی برای اپراتور. همه مقادیر فارسی باشند.';
 
   function setIf(id, val){
     if (val === undefined || val === null || String(val).trim()==='') return;
@@ -840,6 +893,14 @@
         setIf('fPlate', j.plate);
         setIf('fPolicy', j.policy_no);
         setIf('fDesc', j.description);
+        if (j.vehicle){
+          setIf('vType', j.vehicle.type);
+          setIf('vUsage', j.vehicle.usage);
+          setIf('vFuel', j.vehicle.fuel);
+          setIf('vBrand', j.vehicle.brand);
+          setIf('vModel', j.vehicle.model);
+          setIf('vYear', j.vehicle.year);
+        }
         if (j.ticket){
           setIf('tTitle', j.ticket.title);
           setIf('tPriority', j.ticket.priority);
@@ -877,7 +938,7 @@
     body.innerHTML = tickets.map((t,i)=>`
       <tr>
         <td class="tid">${t.id}</td>
-        <td>${esc(t.title)}</td>
+        <td>${esc(t.title)}${t.vehicle?'<div style="font-size:10.5px;color:var(--muted);margin-top:3px">🚗 '+esc(t.vehicle)+'</div>':''}${t.attachments?'<div style="font-size:10.5px;color:var(--muted);margin-top:2px">📎 '+faDigits(t.attachments)+' تصویر</div>':''}</td>
         <td><span class="badge b-type">${esc(t.type||'—')}</span></td>
         <td><span class="badge ${PRIO_CLASS[t.priority]||'b-mid'}">${esc(t.priority)}</span></td>
         <td><span class="badge ${SEV_CLASS[t.severity]||'b-mid'}">${esc(t.severity)}</span></td>
@@ -890,6 +951,30 @@
       tickets.splice(+b.dataset.i,1); persist(); renderTickets();
     });
   }
+  /* ---------- تصاویر خودرو / مدارک ---------- */
+  let photos = []; // {url, name}
+  const photoRow = $('photoRow');
+  $('vPhotosBtn').onclick = () => $('vPhotos').click();
+  $('vPhotos').onchange = () => {
+    for (const f of $('vPhotos').files || []){
+      if (!f.type.startsWith('image/')) continue;
+      photos.push({url: URL.createObjectURL(f), name: f.name});
+    }
+    $('vPhotos').value = '';
+    renderPhotos();
+  };
+  function renderPhotos(){
+    photoRow.innerHTML = photos.map((p,i)=>`
+      <div class="photo-thumb">
+        <img src="${p.url}" alt="${esc(p.name)}">
+        <button class="rm" data-i="${i}" title="حذف" aria-label="حذف تصویر">✕</button>
+      </div>`).join('');
+    photoRow.querySelectorAll('.rm').forEach(b => b.onclick = () => {
+      URL.revokeObjectURL(photos[+b.dataset.i].url);
+      photos.splice(+b.dataset.i,1); renderPhotos();
+    });
+  }
+
   $('saveTicketBtn').onclick = () => {
     const title = $('tTitle').value.trim();
     if (!title){ showErr('عنوان تیکت را وارد کنید (یا مرحله ۳ را اجرا کنید).'); $('tTitle').focus(); return; }
@@ -904,6 +989,8 @@
       severity: $('tSeverity').value,
       category: $('tCategory').value,
       customer: $('fName').value.trim(),
+      vehicle: [$('vBrand').value, $('vModel').value, $('vYear').value && 'مدل '+$('vYear').value].filter(Boolean).join(' '),
+      attachments: photos.length,
       summary: $('tSummary').value.trim(),
       time: faDigits(d.getFullYear()+'/'+pad(d.getMonth()+1)+'/'+pad(d.getDate()))+' '+faDigits(pad(d.getHours())+':'+pad(d.getMinutes()))
     });
@@ -912,11 +999,12 @@
     window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
   };
   $('resetTicketBtn').onclick = () => {
-    ['fType','fProduct','fName','fPhone','fPlate','fPolicy','fDesc','tTitle','tCategory','tSummary','tAction'].forEach(id=>{
+    ['fType','fProduct','fName','fPhone','fPlate','fPolicy','fDesc','tTitle','tCategory','tSummary','tAction','vType','vUsage','vFuel','vBrand','vModel','vYear'].forEach(id=>{
       const el = $(id);
       if (el.tagName==='SELECT') el.selectedIndex = 0; else el.value='';
     });
     $('tPriority').selectedIndex = 1; $('tSeverity').selectedIndex = 0;
+    photos.forEach(p=>URL.revokeObjectURL(p.url)); photos = []; renderPhotos();
     $('aiNote').classList.remove('show');
   };
   renderTickets();
@@ -926,8 +1014,8 @@
     startTimer();
     $('rawText').value =
 'تماس‌گیرنده: سلام وقت بخیر رضایی هستم میخواستم برای ماشینم استعلام قیمت بیمه شخصی ثالث بگیرم بیمه نامه قبلیم هم اخر همین ماه تمام میشود\n'+
-'اپراتور: سلام جناب رضایی خوش امدید حتما لطفا شماره پلاک خودرو را بفرمایید\n'+
-'تماس‌گیرنده: پلاک سی و پنج ایران شصت و شش هفتصد و چهل و دو ب دوازده شماره تماسم هم صفر نهصد و دوازده سیصد و چهل و پنج شصت و هفت هشتاد و نه است\n'+
+'اپراتور: سلام جناب رضایی خوش امدید حتما لطفا مشخصات خودرو و شماره پلاک را بفرمایید\n'+
+'تماس‌گیرنده: ماشینم پژو دویست و شش تیپ دو مدل هزار و سیصد و نود و هشت بنزینی است کاربری شخصی دارد پلاک سی و پنج ایران شصت و شش هفتصد و چهل و دو ب دوازده شماره تماسم هم صفر نهصد و دوازده سیصد و چهل و پنج شصت و هفت هشتاد و نه است\n'+
 'اپراتور: ممنون بیمه نامه قبلی شما تخفیف عدم خسارت هشت سال دارد مایلید تمدید با پرداخت اقساط انجام شود\n'+
 'تماس‌گیرنده: بله اگر اقساط سه ماهه باشد عالی است لطفا لینک پرداخت را برایم پیامک کنید';
     renderChips();
