@@ -238,10 +238,10 @@
           <div class="field">
             <label for="polishModel">مدل ویرایش</label>
             <select id="polishModel">
-              <option value="or-kimi" selected>Kimi K2.6 — OpenRouter (رایگان، فارسی قوی)</option>
-              <option value="or-deepseek">DeepSeek V3.1 — OpenRouter (رایگان)</option>
-              <option value="or-qwen">Qwen3 235B — OpenRouter (رایگان)</option>
-              <option value="or-llama4">Llama 4 Maverick — OpenRouter (رایگان)</option>
+              <option value="or-auto" selected>OpenRouter — بهترین مدل رایگان در دسترس (خودکار)</option>
+              <option value="or-kimi">OpenRouter — خانواده Kimi (رایگان، فارسی قوی)</option>
+              <option value="or-deepseek">OpenRouter — خانواده DeepSeek (رایگان)</option>
+              <option value="or-qwen">OpenRouter — خانواده Qwen (رایگان)</option>
               <option value="groq-oss">GPT-OSS-120B — Groq (رایگان)</option>
               <option value="claude">Claude Sonnet 4.6 — Anthropic</option>
               <option value="gpt51">GPT-5.1 — OpenAI</option>
@@ -279,8 +279,9 @@
             <label for="extractModel">مدل استخراج</label>
             <select id="extractModel">
               <option value="groq-oss" selected>GPT-OSS-120B — Groq (رایگان، سریع)</option>
-              <option value="or-kimi">Kimi K2.6 — OpenRouter (رایگان)</option>
-              <option value="or-deepseek">DeepSeek V3.1 — OpenRouter (رایگان)</option>
+              <option value="or-auto">OpenRouter — بهترین مدل رایگان (خودکار)</option>
+              <option value="or-kimi">OpenRouter — خانواده Kimi (رایگان)</option>
+              <option value="or-deepseek">OpenRouter — خانواده DeepSeek (رایگان)</option>
               <option value="claude">Claude Sonnet 4.6 — قوی‌ترین</option>
               <option value="gpt51">GPT-5.1 — OpenAI</option>
             </select>
@@ -435,16 +436,42 @@
 
   // مدل‌های متنی (برای مرحله ۲ ویرایش و مرحله ۳ استخراج)
   const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
-  const OR_FALLBACKS = ['moonshotai/kimi-k2.6:free','deepseek/deepseek-chat-v3.1:free','qwen/qwen3-235b-a22b:free','meta-llama/llama-4-maverick:free'];
+  // برای OpenRouter به‌جای شناسه ثابت، «خانواده مدل» تعریف می‌شود و شناسه دقیق
+  // در لحظه از فهرست زنده مدل‌های رایگان OpenRouter پیدا می‌شود (شناسه‌ها مرتب تغییر می‌کنند)
   const LLM_MODELS = {
-    'or-kimi':    {service:'openrouter', url:OR_URL, models:['moonshotai/kimi-k2.6:free','moonshotai/kimi-k2:free',...OR_FALLBACKS]},
-    'or-deepseek':{service:'openrouter', url:OR_URL, models:['deepseek/deepseek-chat-v3.1:free','deepseek/deepseek-chat-v3-0324:free',...OR_FALLBACKS]},
-    'or-qwen':    {service:'openrouter', url:OR_URL, models:['qwen/qwen3-235b-a22b:free',...OR_FALLBACKS]},
-    'or-llama4':  {service:'openrouter', url:OR_URL, models:['meta-llama/llama-4-maverick:free',...OR_FALLBACKS]},
+    'or-auto':    {service:'openrouter', url:OR_URL, family:[]},
+    'or-kimi':    {service:'openrouter', url:OR_URL, family:['kimi']},
+    'or-deepseek':{service:'openrouter', url:OR_URL, family:['deepseek']},
+    'or-qwen':    {service:'openrouter', url:OR_URL, family:['qwen']},
+    'or-llama4':  {service:'openrouter', url:OR_URL, family:['llama-4','llama']},
     'groq-oss':   {service:'groq', url:'https://api.groq.com/openai/v1/chat/completions', models:['openai/gpt-oss-120b'], reasoning:'low'},
     'claude':     {service:'anthropic', models:['claude-sonnet-4-6']},
     'gpt51':      {service:'openai', url:'https://api.openai.com/v1/chat/completions', models:['gpt-5.1']}
   };
+
+  // فهرست زنده مدل‌های رایگان OpenRouter (یک‌بار در هر بازدید واکشی می‌شود)
+  let orFreeCache = null;
+  async function getORFreeModels(){
+    if (orFreeCache) return orFreeCache;
+    try{
+      const res = await fetch('https://openrouter.ai/api/v1/models');
+      if (!res.ok) return null;
+      const data = await res.json();
+      const ids = (data.data||[]).map(m=>m.id).filter(id=>id.endsWith(':free'));
+      if (ids.length) orFreeCache = ids;
+      return orFreeCache;
+    }catch(e){ return null; }
+  }
+  async function resolveORModels(family){
+    const live = await getORFreeModels();
+    if (live && live.length){
+      const preferred = live.filter(id => family.some(f=>id.toLowerCase().includes(f)));
+      const others = live.filter(id => !preferred.includes(id));
+      return [...preferred, ...others].slice(0, 8); // حداکثر ۸ تلاش
+    }
+    // اگر فهرست زنده در دسترس نبود، چند حدس متداول
+    return ['moonshotai/kimi-k2:free','deepseek/deepseek-chat-v3.1:free','deepseek/deepseek-r1:free','qwen/qwen3-235b-a22b:free'];
+  }
 
   /* ---------- کلیدها: هر سرویس یک کلید، مشترک بین مراحل ---------- */
   const keys = {};
@@ -707,8 +734,11 @@
     // OpenAI-compatible: Groq، OpenAI، OpenRouter — با زنجیره مدل پشتیبان
     const headers = {'Authorization':'Bearer '+key, 'Content-Type':'application/json'};
     if (spec.service === 'openrouter') headers['X-Title'] = 'CallCenter Demo';
+    const modelList = spec.service === 'openrouter'
+      ? await resolveORModels(spec.family || [])
+      : spec.models;
     let lastStatus = 0;
-    for (const model of spec.models){
+    for (const model of modelList){
       const body = {model, messages:[{role:'system',content:sys},{role:'user',content:userMsg}]};
       if (jsonMode && spec.service !== 'openrouter') body.response_format = {type:'json_object'};
       if (spec.service === 'groq') body.temperature = 0.2;
@@ -717,11 +747,11 @@
       if (res.ok){
         const data = await res.json();
         const text = data.choices?.[0]?.message?.content || '';
-        if (text) return {ok:true, status:200, text};
+        if (text) return {ok:true, status:200, text, model};
         lastStatus = 200; continue;
       }
       lastStatus = res.status;
-      if (![400,404,429,503].includes(res.status)) break; // خطای غیرقابل جبران
+      if (![400,402,404,429,503].includes(res.status)) break; // خطای غیرقابل جبران
     }
     return {ok:false, status:lastStatus, text:''};
   }
@@ -755,7 +785,7 @@
           $('polishedText').classList.add('ok-border');
           $('polishTag').style.display='';
           renderChips();
-          showToast('متن ویرایش شد ✓ — حالا مرحله ۳ را اجرا کنید');
+          showToast('متن ویرایش شد ✓'+(r.model?' — مدل: '+r.model.split('/').pop().replace(':free',''):'')+' — حالا مرحله ۳ را اجرا کنید');
         } else {
           showErr('خروجی مدل ویرایش نامعقول بود؛ مدل دیگری را امتحان کنید.');
         }
